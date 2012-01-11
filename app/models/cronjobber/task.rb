@@ -74,7 +74,7 @@ class Cronjobber::Task < ActiveRecord::Base
   
   def lock!(key=nil)
     return false if self.locked?
-    return self.update_attributes!(:locked_at => DateTime.new, :locking_key => Time.now.to_i)
+    return self.update_attributes!(:locked_at => DateTime.now, :locking_key => Time.now.to_i)
   end
   
   def unlock! exception=nil
