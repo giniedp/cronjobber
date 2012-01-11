@@ -122,7 +122,7 @@ describe Cronjobber::Task do
     it "should not perform the job when exception occurs" do
       job = FailJob.cronjob_perform
       job.locked?.should be false
-      job.status.should == "returned with error"
+      job.status.should == "exception"
       job.last_error.starts_with?("job failed with exception message").should be true
     end
     

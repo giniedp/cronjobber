@@ -5,14 +5,15 @@ module Cronjobber
       tasks = Array(tasks) + Cronjobber.tasks
       tasks.map! do |task|
         if task.is_a? String
-          task = task.constantize 
+          task = task.camelize.constantize
         else
           task
         end
       end      
-      tasks.map do |task|
+      tasks.map! do |task|
         task.cronjob_perform
       end
+      return tasks, tasks.map(&:format)
     end
     
   end

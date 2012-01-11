@@ -1,0 +1,81 @@
+= Cronjobber
+Allows to define cronjobs programmatically.
+
+== Installation
+In your gemfile
+    gem 'cronjobber', :git => 'git://github.com/giniedp/cronjobber.git'
+    
+Run
+    bundle install
+    
+Cronjobber expects that your Database has a table named 'cronjobs'. Just use the following migration snippet to create the required fields. No, there is no generator for this... don't ask.
+    create_table(:cronjobs) do |t|
+      t.string :name
+      t.datetime :run_at
+      t.datetime :locked_at
+      t.string :locking_key
+      t.integer :duration
+      t.text :last_error
+      t.integer :total_runs
+      t.integer :total_failures
+    end
+    
+    
+== Define a cronjob
+In your models directory create one file for each task that you want to perform. I prefer to collect them in an extra directory.
+
+  # app/models/cronjobs/my_task.rb
+  class Cronjob::MyTask < Cronjobber::Task
+    # initialize the task
+    run_task :every => 5.minutes
+    
+    def run
+      # task implementation goes here
+    end
+  end
+
+=== Options
+
+[every]  The time between executions. Default is <tt>0.minutes</tt>.
+
+[at]  An array with time of day strings when the task should be executed e.g. ["12:00", "20:00"]. Default is <tt>[]</tt>
+
+[in_background]  Tells the plugin to run this task in background or not. Default is <tt>false</tt>. Cronjobber uses delayed_job to delay the execution.
+
+[method]  The method to use to run the task. Default is <tt>:run</tt>
+
+=== Examples
+Keep in mind that the exact execution time of a task always depends on how often the Cronjobber is triggered
+
+  run_task
+Will use the default settings. The cronjob will be executed every time the Cronjobber is triggered
+
+  run_task :every => 5.minutes
+Will execute the task only if 5 minutes are left since the last execution. 
+
+  run_task :at => %w(12:00 15:00 20:00)
+Will execute the task once between the given times.
+  
+  run_task :every => 30.minutes, :at => "12:00"
+Will execute the task every 30 minutes starting at 12:00.
+
+  run_task :every => 30.minutes, :at => %w(12:00 15:00 20:00)
+Same as above. Only the first value of the <tt>at</tt> array is respected.
+
+== Trigger task execution
+Inside any Controller use the method <tt>execute_cronjob_tasks</tt> to trigger the Cronjobber. For example in your application controller:
+
+  class ApplicationController < ActionController::Base
+    def cronjobs
+      tasks, log = execute_cronjob_tasks %w(cronjobs/my_task)
+      render :text => log.join("\n")
+    end
+  end
+  
+The first returning value is an array of all tasks. The second is an array of status messages for each task.
+In order to activate a cronjob task, you have to list it in the first argument of the <tt>execute_cronjob_tasks</tt> method, 
+or in the config.cronjobber.tasks configuration setting in your config/application.rb.
+
+Now you have to make sure that the action is visited periodically. For example with a Unix crontab entry:
+
+  */1 * * * * curl http://your-app.com/cronjobs # visits http://your-app.com/cronjobs every minute

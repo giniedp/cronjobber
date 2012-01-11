@@ -18,7 +18,7 @@ class Cronjobber::Task < ActiveRecord::Base
   end
   
   def self.cronjob_enqueue
-    self.delay.cronjob_perform_delayed(self.locking_key)
+    self.delay.cronjob_perform_delayed(self.class.cronjob.locking_key)
   end
   
   def self.cronjob_perform
@@ -44,7 +44,7 @@ class Cronjobber::Task < ActiveRecord::Base
     
     return cronjob
   rescue Exception => exception
-    cronjob.status = "returned with error"
+    cronjob.status = "exception"
     cronjob.unlock!(exception)
     return cronjob
   end
@@ -58,7 +58,7 @@ class Cronjobber::Task < ActiveRecord::Base
       cronjob.unlock!
     end
   rescue Exception => exception
-    cronjob.status = "returned with error"
+    cronjob.status = "exception"
     cronjob.unlock!(exception)
   end
   
@@ -131,8 +131,8 @@ class Cronjobber::Task < ActiveRecord::Base
     
   end
   
-  def to_s
-    "Cronjob:#{self.class.cronjob_name} Status:#{self.status} Duration:#{self.duration} LastError:#{self.last_error.to_s.split('\n').first.to_s}"
+  def format
+    "#{self.class.cronjob_name} / #{self.status} / #{self.duration}ms / #{self.last_error.to_s[0..64]}"
   end
   
   protected
