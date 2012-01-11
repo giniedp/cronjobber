@@ -10,7 +10,7 @@ end
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "cronjob"
+    gem.name = "cronjobber"
     gem.summary = %Q{Cronjob for Rails}
     gem.description = %Q{Enables simple cronjobs for rails}
     gem.email = "giniedp@online.de"
