@@ -17,8 +17,8 @@ class Cronjobber::Task < ActiveRecord::Base
     @cronjob
   end
   
-  def self.cronjob_enqueue
-    self.delay.cronjob_perform_delayed(self.class.cronjob.locking_key)
+  def self.cronjob_enqueue(key=nil)
+    self.delay.cronjob_perform_delayed(key)
   end
   
   def self.cronjob_perform
@@ -34,7 +34,7 @@ class Cronjobber::Task < ActiveRecord::Base
     end
     
     if self.cronjob_delayed
-      self.cronjob_enqueue
+      self.cronjob_enqueue(cronjob.locking_key)
       cronjob.status = "enqueued"
     else
       cronjob.send(self.cronjob_method)

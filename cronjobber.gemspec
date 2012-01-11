@@ -25,6 +25,7 @@ Gem::Specification.new do |s|
     "Rakefile",
     "VERSION",
     "app/models/cronjobber/task.rb",
+    "cronjobber.gemspec",
     "init.rb",
     "lib/cronjobber.rb",
     "lib/cronjobber/tasks_helper.rb",
