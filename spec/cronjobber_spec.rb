@@ -136,7 +136,8 @@ describe Cronjobber::Task do
     it "should perform background job with valid key" do
       job = BackgroundJob.cronjob_perform
       job.locked?.should be true
-      BackgroundJob.cronjob_perform_delayed(job.locking_key)
+      job.locking_key.blank?.should be false
+      job = BackgroundJob.cronjob_perform_delayed(job.locking_key)
       job.locked?.should be false
       job.status.should == "performed"
       job.last_error.should be_nil
@@ -145,7 +146,7 @@ describe Cronjobber::Task do
     it "should not perform background job with invalidvalid key" do
       job = BackgroundJob.cronjob_perform
       job.locked?.should be true
-      BackgroundJob.cronjob_perform_delayed("some invalid key")
+      job = BackgroundJob.cronjob_perform_delayed("some invalid key")
       job.locked?.should be true
       job.status.should == "locked"
     end
@@ -156,20 +157,22 @@ describe Cronjobber::Task do
       class TestJob < Cronjobber::Task
         run_task :every => 0.minutes, :at => []
       end
-      @test_job = TestJob.new({ :run_at => Time.parse("2011-1-1 12:00") })
-      @test_job.save!
+      TestJob.destroy_all
+      TestJob.create!({ :name => TestJob.cronjob_name, :run_at => Time.parse("2011-1-1 12:00") })
     end
     
     it "should be runable before run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 11:00")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2010-12-31 11:59")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 11:59")).should be true
     end
     
     it "should be runable on run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:00")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:00")).should be true
     end
     
     it "should be runable after run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 13:00")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:01")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-2 12:01")).should be true
     end
   end
   
@@ -178,50 +181,55 @@ describe Cronjobber::Task do
       class TestJob < Cronjobber::Task
         run_task :every => 10.minutes, :at => []
       end
-      @test_job = TestJob.new({ :run_at => Time.parse("2011-1-1 12:00") })
-      @test_job.save!
+      TestJob.destroy_all
+      TestJob.create!({ :name => TestJob.cronjob_name, :run_at => Time.parse("2011-1-1 12:00") })
     end
     
     it "should not be runable before run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 11:00")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 11:00")).should be false
     end
     
     it "should not be runable on run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:00")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:00")).should be false
     end
     
     it "should not be runable after run_at time before frequency elapses" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:09")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:09")).should be false
     end
     
     it "should be runable after run_at time after frequency elapsed" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:10")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:10")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:11")).should be true
     end
   end
   
   describe "without frequency and with time" do
     before :each do
       class TestJob < Cronjobber::Task
-        run_task :every => 0.minutes, :at => ["12:00"]
+        run_task :at => ["12:00"]
       end
-      @test_job = TestJob.new({ :run_at => Time.parse("2011-1-1 12:00") })
-      @test_job.save!
+      TestJob.destroy_all
+      TestJob.create!({ :name => TestJob.cronjob_name, :run_at => Time.parse("2011-1-1 12:00") })
     end
     
-    it "should not be runable before run_at time" do
-      @test_job.should_run?(Time.parse("2010-1-1 11:00")).should be false
-      @test_job.should_run?(Time.parse("2011-1-1 11:00")).should be false
-      @test_job.should_run?(Time.parse("2011-1-1 11:59")).should be false
+    it "should not be runable before next run at time" do
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 11:59")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:00")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:01")).should be false
+      
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-2 11:59")).should be false
     end
     
-    it "should not be runable on run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:00")).should be false
+    it "should not be runable on run_at time on same day" do
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:00")).should be false
     end
     
-    it "should be runable after run_at time" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:01")).should be true
-      @test_job.should_run?(Time.parse("2011-1-1 13:00")).should be true
-      @test_job.should_run?(Time.parse("2012-1-1 12:01")).should be true
+    it "should be runable on next run_at time" do
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-2 12:00")).should be true
+    end
+    
+    it "should be runable after next run_at time" do
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-2 12:01")).should be true
     end
   end
   
@@ -230,26 +238,26 @@ describe Cronjobber::Task do
       class TestJob < Cronjobber::Task
         run_task :every => 30.minutes, :at => ["12:00"]
       end
-      @test_job = TestJob.new({ :run_at => Time.parse("2011-1-1 12:00") })
-      @test_job.save!
+      TestJob.destroy_all
+      TestJob.create!({ :name => TestJob.cronjob_name, :run_at => Time.parse("2011-1-1 12:00") })
     end
     
     it "should not be runable before run_at time" do
-      @test_job.should_run?(Time.parse("2010-1-1 11:00")).should be false
-      @test_job.should_run?(Time.parse("2011-1-1 11:00")).should be false
-      @test_job.should_run?(Time.parse("2011-1-1 11:59")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2010-1-1 11:00")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 11:00")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 11:59")).should be false
     end
     
     it "should not be runable after run_at within frequency time" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:00")).should be false
-      @test_job.should_run?(Time.parse("2011-1-1 12:01")).should be false
-      @test_job.should_run?(Time.parse("2011-1-1 12:29")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:00")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:01")).should be false
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:29")).should be false
     end
     
     it "should be runable after run_at time after frequency time" do
-      @test_job.should_run?(Time.parse("2011-1-1 12:30")).should be true
-      @test_job.should_run?(Time.parse("2011-1-1 13:31")).should be true
-      @test_job.should_run?(Time.parse("2012-1-1 12:00")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 12:30")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2011-1-1 13:31")).should be true
+      TestJob.current_cronjob.should_run?(Time.parse("2012-1-1 12:00")).should be true
     end
   end
   

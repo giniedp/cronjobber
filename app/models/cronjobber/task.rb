@@ -11,10 +11,8 @@ class Cronjobber::Task < ActiveRecord::Base
     self.name.underscore
   end
 
-  def self.cronjob
-    @cronjob ||= self.find_by_name(self.cronjob_name)
-    @cronjob ||= self.create!(:name => self.cronjob_name)
-    @cronjob
+  def self.current_cronjob
+    self.find_by_name(self.cronjob_name) || self.create!(:name => self.cronjob_name)
   end
   
   def self.cronjob_enqueue(key=nil)
@@ -22,6 +20,7 @@ class Cronjobber::Task < ActiveRecord::Base
   end
   
   def self.cronjob_perform
+    cronjob = self.current_cronjob
     key = DateTime.now.to_i
     
     unless cronjob.lock!(key)
@@ -36,10 +35,10 @@ class Cronjobber::Task < ActiveRecord::Base
     end
     
     if self.cronjob_delayed
-      self.cronjob_enqueue(key)
       cronjob.status = "enqueued"
       cronjob.last_error = nil
       cronjob.save!
+      self.cronjob_enqueue(key)
     else
       cronjob.send(self.cronjob_method)
       cronjob.status = "performed"
@@ -54,16 +53,20 @@ class Cronjobber::Task < ActiveRecord::Base
   end
   
   def self.cronjob_perform_delayed(key)
-    if cronjob.locked?(key)
+    cronjob = self.current_cronjob
+    
+    if cronjob.locked?(key.to_s)
       cronjob.status = "locked"
     else
       cronjob.send(self.cronjob_method)
       cronjob.status = "performed"
       cronjob.unlock!
     end
+    return cronjob
   rescue Exception => exception
     cronjob.status = "exception"
     cronjob.unlock!(exception)
+    return cronjob
   end
   
   def locked?(key=nil)
@@ -75,45 +78,49 @@ class Cronjobber::Task < ActiveRecord::Base
   end
   
   def lock!(key=nil)
-    return false if self.locked?
-    return self.update_attributes!(:locked_at => DateTime.now, :locking_key => key)
+    !self.locked? && self.update_attributes!(:locked_at => DateTime.now, :locking_key => key) 
   end
   
   def unlock! exception=nil
-    if exception
-      self.last_error = [exception.message, exception.backtrace].flatten.join("\n")
-      self.total_failures = self.total_failures.to_i + 1
-    else
-      self.last_error = nil
+    self.class.transaction do
+      if exception
+        self.last_error = [exception.message, exception.backtrace].flatten.join("\n")
+        self.total_failures = self.total_failures.to_i + 1
+      else
+        self.last_error = nil
+      end
+      
+      if self.status == "performed"
+        self.total_runs = self.total_runs.to_i + 1
+        self.duration = (Time.now - self.locked_at.to_time) * 1000 if self.locked_at
+        self.run_at = Time.now
+      end
+
+      self.locked_at = nil
+      self.locking_key = nil
+      self.save!
     end
-  
-    self.total_runs = self.total_runs.to_i + 1
-    self.duration = (Time.now - self.locked_at.to_time) * 1000 if self.locked_at
-    self.locked_at = nil
-    self.locking_key = nil
-    self.run_at = Time.now
-    self.save!
   end
   
   def self.cronjob_timepoint t1, t2
     result = []
-    t1.to_date.upto(t2.to_date) do |date|
+    (t1 - 1.day).to_date.upto((t2 + 1.day).to_date) do |date|
       self.cronjob_timesteps.each do |time|
         result << Time.parse([date.year, date.month, date.day].join("-") + " " + time.to_s) 
       end
     end
-    result.sort.uniq.select { |time| (time > t1 && time < t2) }.first
+    result.sort.uniq.select { |time| (time > t1 && time <= t2) }.first
   end
   
-  def should_run?(run_at=nil)
-    run_at ||= Time.now
-    t1, t2 = (self.run_at || run_at), run_at
+  def should_run?(at_time=nil)
+    t1 = self.run_at || Time.now
+    t2 = at_time || Time.now
 
     if self.class.cronjob_frequency.to_i == 0
       if self.class.cronjob_timesteps.empty?
         true
       else
-        self.class.cronjob_timepoint(t1, t2 + 1.day).present?
+        self.class.cronjob_timepoint(t1, t2).present?
       end
     else
       if self.class.cronjob_timesteps.empty?
