@@ -22,7 +22,9 @@ class Cronjobber::Task < ActiveRecord::Base
   end
   
   def self.cronjob_perform
-    unless cronjob.lock!
+    key = DateTime.now.to_i
+    
+    unless cronjob.lock!(key)
       cronjob.status = "locked"
       return cronjob
     end
@@ -34,7 +36,7 @@ class Cronjobber::Task < ActiveRecord::Base
     end
     
     if self.cronjob_delayed
-      self.cronjob_enqueue(cronjob.locking_key)
+      self.cronjob_enqueue(key)
       cronjob.status = "enqueued"
       cronjob.last_error = nil
       cronjob.save!
@@ -74,7 +76,7 @@ class Cronjobber::Task < ActiveRecord::Base
   
   def lock!(key=nil)
     return false if self.locked?
-    return self.update_attributes!(:locked_at => DateTime.now, :locking_key => Time.now.to_i)
+    return self.update_attributes!(:locked_at => DateTime.now, :locking_key => key)
   end
   
   def unlock! exception=nil

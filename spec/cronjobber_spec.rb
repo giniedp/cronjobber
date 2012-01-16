@@ -100,13 +100,13 @@ describe Cronjobber::Task do
     end
 
     it "should be locked for invalid key" do
-      @job.lock!.should be true
-      @job.locked?("123456").should be true
+      @job.lock!("123456").should be true
+      @job.locked?("654321").should be true
     end
         
     it "should not be locked for valid key" do
-      @job.lock!.should be true
-      @job.locked?(@job.locking_key).should be false
+      @job.lock!("123456").should be true
+      @job.locked?("123456").should be false
     end
     
     it "should perform the job" do
