@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "cronjobber"
-  s.version = "1.0.1"
+  s.version = "1.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Alexander Gr\303\244fenstein"]
-  s.date = "2012-01-11"
+  s.date = "2012-01-16"
   s.description = "Enables simple cronjobs for rails"
   s.email = "giniedp@online.de"
   s.extra_rdoc_files = [
@@ -65,7 +65,7 @@ Gem::Specification.new do |s|
     "spec/dummy/script/rails",
     "spec/spec_helper.rb"
   ]
-  s.homepage = "http://github.com/giniedp/cronjob"
+  s.homepage = "https://github.com/giniedp/cronjobber"
   s.require_paths = ["lib"]
   s.rubygems_version = "1.8.15"
   s.summary = "Cronjob for Rails"

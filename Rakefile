@@ -14,7 +14,7 @@ begin
     gem.summary = %Q{Cronjob for Rails}
     gem.description = %Q{Enables simple cronjobs for rails}
     gem.email = "giniedp@online.de"
-    gem.homepage = "http://github.com/giniedp/cronjob"
+    gem.homepage = "https://github.com/giniedp/cronjobber"
     gem.authors = ["Alexander Gräfenstein"]
     # gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
