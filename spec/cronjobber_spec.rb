@@ -68,7 +68,7 @@ describe Cronjobber::Task do
       
       class BackgroundJob < Cronjobber::Task
         run_task :in_background => true
-        def self.cronjob_enqueue
+        def self.cronjob_enqueue(key=nil)
           # mock with empty method for testing
         end
       end

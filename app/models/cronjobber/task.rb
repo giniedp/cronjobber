@@ -78,21 +78,19 @@ class Cronjobber::Task < ActiveRecord::Base
   end
   
   def unlock! exception=nil
-    return true unless self.locked?
     if exception
       self.last_error = [exception.message, exception.backtrace].flatten.join("\n")
       self.total_failures = self.total_failures.to_i + 1
     else
       self.last_error = nil
     end
-    
-    self.update_attributes!({
-      :total_runs => self.total_runs.to_i + 1,
-      :locked_at => nil, 
-      :locking_key => nil,
-      :run_at => Time.now, 
-      :duration => (Time.now - self.locked_at.to_time) * 1000
-    })
+  
+    self.total_runs = self.total_runs.to_i + 1
+    self.duration = (Time.now - self.locked_at.to_time) * 1000 if self.locked_at
+    self.locked_at = nil
+    self.locking_key = nil
+    self.run_at = Time.now
+    self.save!
   end
   
   def self.cronjob_timepoint t1, t2
