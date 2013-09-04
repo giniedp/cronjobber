@@ -1,3 +1,4 @@
+# -*- encoding : utf-8 -*-
 require 'rubygems'
 require 'rake'
 
@@ -13,11 +14,9 @@ begin
     gem.name = "cronjobber"
     gem.summary = %Q{Cronjob for Rails}
     gem.description = %Q{Enables simple cronjobs for rails}
-    gem.email = "giniedp@online.de"
+    gem.email = "mail@ginie.eu"
     gem.homepage = "https://github.com/giniedp/cronjobber"
     gem.authors = ["Alexander Gräfenstein"]
-    # gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
-    # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new
 rescue LoadError
@@ -25,7 +24,7 @@ rescue LoadError
 end
 
 require 'rake'
-require 'rake/rdoctask'
+require 'rdoc/task'
 
 require 'rspec/core'
 require 'rspec/core/rake_task'

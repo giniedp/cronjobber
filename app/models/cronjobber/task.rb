@@ -1,10 +1,11 @@
 class Cronjobber::Task < ActiveRecord::Base
-  set_table_name "cronjobs"  
+  self.table_name= :cronjobs
+
   attr_accessor :status
   
-  def initialize options={}
+  def initialize *arg
     raise "#{self.class.name} is abstract" if self.class == Cronjobber::Task
-    super options
+    super
   end
 
   def self.cronjob_name
