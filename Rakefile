@@ -11,12 +11,13 @@ end
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "cronjobber"
+    gem.name = 'cronjobber'
     gem.summary = %Q{Cronjob for Rails}
     gem.description = %Q{Enables simple cronjobs for rails}
-    gem.email = "mail@ginie.eu"
-    gem.homepage = "https://github.com/giniedp/cronjobber"
-    gem.authors = ["Alexander Gräfenstein"]
+    gem.email = 'mail@ginie.eu'
+    gem.homepage = 'https://github.com/giniedp/cronjobber'
+    gem.authors = ['Alexander Gräfenstein']
+    gem.license = 'MIT'
   end
   Jeweler::GemcutterTasks.new
 rescue LoadError
